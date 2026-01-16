@@ -1,19 +1,20 @@
 import { AppDataSource } from "../data-source";
 import { Documento } from "../entities/Documento";
 import { Caso } from "../entities/Caso";
-import { Alerta, AlertaPrioridad } from "../entities/Alerta"; // Importamos para las alertas
+import { Alerta, AlertaPrioridad } from "../entities/Alerta"; 
 import Tesseract from "tesseract.js";
 import * as fs from "fs";
 import * as path from "path";
 import { IAService } from "./IAService"; 
 import { VectorService } from "./VectorService"; 
+import * as mammoth from "mammoth"; // Librería para extraer texto de Word
 
 const PDFParser = require("pdf2json");
 
 export class DocumentoService {
     private documentoRepository = AppDataSource.getRepository(Documento);
     private casoRepository = AppDataSource.getRepository(Caso);
-    private alertaRepository = AppDataSource.getRepository(Alerta); // Repositorio de alertas
+    private alertaRepository = AppDataSource.getRepository(Alerta); 
     private iaService = new IAService(); 
     private vectorService = new VectorService(); 
 
@@ -24,7 +25,6 @@ export class DocumentoService {
             throw new Error("El caso especificado no existe");
         }
 
-        // Normalizamos la ruta para que sea amigable con el visor (sustituimos backslashes por slashes)
         const rutaNormalizada = archivo.path.replace(/\\/g, '/');
 
         const nuevoDocumento = this.documentoRepository.create({
@@ -38,7 +38,7 @@ export class DocumentoService {
 
         console.log(`[SISTEMA] Iniciando procesamiento para: ${archivo.originalname}`);
         
-        // Ejecutamos el procesamiento en segundo plano para no bloquear la respuesta al usuario
+        // Ejecutamos el procesamiento en segundo plano
         this.procesarArchivo(documentoGuardado.id, archivo.path, archivo.mimetype);
 
         return documentoGuardado;
@@ -46,6 +46,7 @@ export class DocumentoService {
 
     private async procesarArchivo(documentoId: number, ruta: string, mimetype: string) {
         try {
+            // RUTA 1: Procesamiento de PDF
             if (mimetype === "application/pdf") {
                 console.log(`[PDF] Analizando contenido con PDFParser...`);
                 
@@ -73,7 +74,22 @@ export class DocumentoService {
                 });
 
                 pdfParser.loadPDF(ruta);
-            } else {
+            } 
+            // RUTA 2: Procesamiento de WORD (.docx) - NUEVA FUNCIONALIDAD
+            else if (mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || ruta.endsWith('.docx')) {
+                console.log(`[WORD] Extrayendo texto nativo con Mammoth...`);
+                const result = await mammoth.extractRawText({ path: ruta });
+                const textoWord = result.value;
+
+                await this.documentoRepository.update(documentoId, {
+                    contenido_texto: textoWord || ""
+                });
+
+                console.log(`[WORD] Texto extraído con éxito ✅`);
+                await this.ejecutarAnalisisIA(documentoId, textoWord);
+            }
+            // RUTA 3: Imágenes o formatos desconocidos (OCR Directo)
+            else {
                 await this.procesarOCR(documentoId, ruta);
             }
         } catch (error) {
@@ -83,6 +99,12 @@ export class DocumentoService {
 
     private async procesarOCR(documentoId: number, fuente: string | Buffer) {
         try {
+            // Verificamos si la fuente es un archivo de Word para evitar que Tesseract explote
+            if (typeof fuente === 'string' && fuente.endsWith('.docx')) {
+                console.error("[IA - OCR] Error: Tesseract no puede procesar archivos .docx");
+                return;
+            }
+
             console.log(`[IA] Iniciando Tesseract para ID: ${documentoId}...`);
             const result = await Tesseract.recognize(
                 fuente,
@@ -119,7 +141,7 @@ export class DocumentoService {
             
             console.log(`[SISTEMA] Análisis de IA guardado para documento ID: ${documentoId} ✅`);
 
-            // 2. FASE 3: Indexación en Pinecone
+            // 2. Indexación en Pinecone
             const docDb = await this.documentoRepository.findOne({ 
                 where: { id: documentoId },
                 relations: ["caso"] 
@@ -139,7 +161,7 @@ export class DocumentoService {
                     pinecone_id: pineconeId
                 });
 
-                // 3. FASE 4: DETECCIÓN AUTOMÁTICA DE PLAZOS
+                // 3. DETECCIÓN AUTOMÁTICA DE PLAZOS
                 console.log(`[IA - Plazos] Analizando plazos procesales para el caso ${docDb.caso.id}...`);
                 const plazosDetectados = await this.iaService.detectarPlazosProcesales(texto);
 
