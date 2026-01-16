@@ -87,7 +87,7 @@ const ClientesPage = () => {
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
         <input 
           type="text" 
-          placeholder="Buscar cliente..."
+          placeholder="Buscar cliente por nombre o documento..."
           className="w-full bg-white border-2 border-slate-100 rounded-xl md:rounded-[2rem] py-3.5 md:py-5 pl-14 pr-6 text-sm md:text-lg font-bold text-slate-900 focus:border-accent focus:outline-none shadow-sm transition-all"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -133,11 +133,14 @@ const ClientesPage = () => {
                 <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">Expedientes</span>
                 <span className="text-base md:text-lg font-black text-slate-900">{cliente.casos?.length || 0}</span>
               </div>
+              
+              {/* ACCIÓN: Ir al perfil detallado */}
               <button 
                 onClick={() => navigate(`/clientes/${cliente.id}`)}
-                className="bg-slate-100 hover:bg-accent hover:text-white p-3 md:p-4 rounded-xl md:rounded-2xl transition-all text-slate-400 group-hover:translate-x-1"
+                className="flex items-center gap-2 bg-slate-100 hover:bg-accent hover:text-white px-4 py-2 md:py-3 rounded-xl md:rounded-2xl transition-all text-slate-500 font-bold text-[10px] uppercase tracking-widest group"
               >
-                <ArrowRight size={20} />
+                Ver Perfil
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
