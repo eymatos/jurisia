@@ -14,8 +14,15 @@ interface Caso {
   };
 }
 
+// Interfaz para el listado de clientes en el selector
+interface ClienteSimplificado {
+  id: number;
+  nombre: string;
+}
+
 const ExpedientesPage = () => {
   const [casos, setCasos] = useState<Caso[]>([]);
+  const [clientes, setClientes] = useState<ClienteSimplificado[]>([]); // Estado para los clientes
   const [busqueda, setBusqueda] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -36,8 +43,19 @@ const ExpedientesPage = () => {
     }
   };
 
+  // Nueva función para cargar la lista de clientes para el modal
+  const cargarClientes = async () => {
+    try {
+      const res = await api.get('/clientes');
+      setClientes(res.data);
+    } catch (err) {
+      console.error("Error al cargar la lista de clientes", err);
+    }
+  };
+
   useEffect(() => {
     cargarCasos();
+    cargarClientes(); // Cargamos los clientes al iniciar la página
   }, []);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -58,7 +76,7 @@ const ExpedientesPage = () => {
       setNuevoCaso({ titulo: '', numero_expediente: '', tribunales: '', clienteId: '' });
       await cargarCasos(); 
     } catch (err) {
-      alert("Error al crear el expediente. Asegúrate de que el ID del cliente sea correcto.");
+      alert("Error al crear el expediente. Por favor verifica los datos.");
       console.error(err);
     } finally {
       setEnviando(false);
@@ -123,8 +141,22 @@ const ExpedientesPage = () => {
                   <input name="numero_expediente" value={nuevoCaso.numero_expediente} onChange={handleInputChange} type="text" placeholder="ESIV-0045" className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">ID Cliente</label>
-                  <input required name="clienteId" value={nuevoCaso.clienteId} onChange={handleInputChange} type="number" placeholder="ID" className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm" />
+                  {/* SELECTOR DE CLIENTES MEJORADO */}
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Seleccionar Cliente</label>
+                  <select 
+                    required 
+                    name="clienteId" 
+                    value={nuevoCaso.clienteId} 
+                    onChange={handleInputChange} 
+                    className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="">Seleccione...</option>
+                    {clientes.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {cliente.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
