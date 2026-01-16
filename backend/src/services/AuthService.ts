@@ -9,7 +9,7 @@ dotenv.config();
 export class AuthService {
     private usuarioRepository = AppDataSource.getRepository(Usuario);
     
-    // CORRECCIÓN: Sincronizamos la clave con la del authMiddleware
+    // Priorizamos la variable de entorno de Render
     private readonly JWT_SECRET = process.env.JWT_SECRET || 'juris_secret_2026';
 
     /**
@@ -22,12 +22,12 @@ export class AuthService {
         
         const nuevoUsuario = this.usuarioRepository.create({
             ...datos,
-            password: passwordHasheado
+            password: passwordHasheado,
+            activo: true // Nos aseguramos de que nazca activo
         });
 
         const usuarioGuardado = await this.usuarioRepository.save(nuevoUsuario);
         
-        // Creamos una copia de los datos para la respuesta sin el campo password
         const { password: _, ...usuarioSinPassword } = usuarioGuardado;
         return usuarioSinPassword;
     }
@@ -36,34 +36,49 @@ export class AuthService {
      * Valida credenciales y genera un token de acceso
      */
     async login(email: string, pass: string) {
+        // Log de diagnóstico para consola de Render
+        console.log(`[AuthService]: Buscando usuario con email: ${email}`);
+
         const usuario = await this.usuarioRepository.findOneBy({ email });
 
-        if (!usuario || !usuario.activo) {
-            throw new Error("Credenciales inválidas o usuario inactivo");
+        if (!usuario) {
+            console.error(`[AuthService]: Usuario no encontrado: ${email}`);
+            throw new Error("Credenciales inválidas");
+        }
+
+        // REPARACIÓN: Si 'activo' es null (por el insert manual), lo tratamos como true 
+        // para no bloquear el acceso inicial.
+        if (usuario.activo === false) {
+            console.error(`[AuthService]: Usuario encontrado pero está INACTIVO: ${email}`);
+            throw new Error("Usuario inactivo. Contacte al administrador.");
         }
 
         const passwordValido = await bcrypt.compare(pass, usuario.password);
         if (!passwordValido) {
+            console.error(`[AuthService]: Contraseña incorrecta para: ${email}`);
             throw new Error("Credenciales inválidas");
         }
 
-        // Generamos el Token con el nombre_completo para el Dashboard
+        // Generamos el Token
         const token = jwt.sign(
             { 
                 id: usuario.id, 
                 email: usuario.email, 
                 rol: usuario.rol,
-                nombre: usuario.nombre_completo // Añadido para el saludo dinámico
+                nombre: usuario.nombre_completo 
             },
             this.JWT_SECRET,
             { expiresIn: '8h' }
         );
 
-        // Actualizamos la fecha de última conexión (Auditoría básica de la Fase 10)
-        usuario.ultima_conexion = new Date();
-        await this.usuarioRepository.save(usuario);
+        // Intento de actualización de última conexión
+        try {
+            usuario.ultima_conexion = new Date();
+            await this.usuarioRepository.save(usuario);
+        } catch (e) {
+            console.warn("[AuthService]: No se pudo actualizar la última conexión, pero el login continúa.");
+        }
 
-        // Devolvemos datos del usuario omitiendo explícitamente el password
         const { password: _, ...datosUsuario } = usuario;
         return { usuario: datosUsuario, token };
     }
