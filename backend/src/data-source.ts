@@ -14,18 +14,17 @@ const dbUrl = process.env.DATABASE_URL;
 export const AppDataSource = new DataSource({
     type: "postgres",
     
-    // Configuración para la Nube (Render + Supabase con Pooler)
+    // Si estamos en Render, usamos exclusivamente la URL codificada
     ...(dbUrl ? {
         url: dbUrl,
+        ssl: {
+            rejectUnauthorized: false
+        },
         extra: {
-            ssl: {
-                rejectUnauthorized: false
-            },
-            // IMPORTANTE PARA EL POOLER: Evita conflictos de sentencias preparadas
             prepareThreshold: 0 
         }
     } : {
-        // Desarrollo Local (Tu PC)
+        // Localhost
         host: process.env.DB_HOST || "localhost",
         port: parseInt(process.env.DB_PORT || "5432"),
         username: process.env.DB_USER || "postgres",
@@ -33,7 +32,7 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || "jurisia_db",
     }),
 
-    synchronize: true, // Crea automáticamente las tablas en Supabase al conectar
+    synchronize: true, 
     logging: false,
     entities: [Cliente, Caso, Documento, Alerta, Usuario],
     migrations: [],
