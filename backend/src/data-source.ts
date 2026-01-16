@@ -9,22 +9,23 @@ import { Usuario } from "./entities/Usuario";
 
 dotenv.config();
 
-// Determinamos si estamos en la nube revisando si DATABASE_URL existe
 const dbUrl = process.env.DATABASE_URL;
 
 export const AppDataSource = new DataSource({
     type: "postgres",
     
-    // Si hay URL de base de datos (Producción), TypeORM ignora host/port/user/pass
+    // Configuración para la Nube (Render + Supabase con Pooler)
     ...(dbUrl ? {
         url: dbUrl,
         extra: {
             ssl: {
                 rejectUnauthorized: false
-            }
+            },
+            // IMPORTANTE PARA EL POOLER: Evita conflictos de sentencias preparadas
+            prepareThreshold: 0 
         }
     } : {
-        // Configuración para Desarrollo Local
+        // Desarrollo Local (Tu PC)
         host: process.env.DB_HOST || "localhost",
         port: parseInt(process.env.DB_PORT || "5432"),
         username: process.env.DB_USER || "postgres",
@@ -32,7 +33,7 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || "jurisia_db",
     }),
 
-    synchronize: true, // Esto creará las tablas en Supabase automáticamente
+    synchronize: true, // Crea automáticamente las tablas en Supabase al conectar
     logging: false,
     entities: [Cliente, Caso, Documento, Alerta, Usuario],
     migrations: [],
