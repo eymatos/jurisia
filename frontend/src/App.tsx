@@ -6,7 +6,9 @@ import DetalleExpedientePage from './pages/DetalleExpedientePage';
 import Dashboard from './pages/Dashboard';
 import ChatLegalPage from './pages/ChatLegalPage';
 import ClientesPage from './pages/ClientesPage'; 
-import LoginPage from './pages/LoginPage'; 
+import LoginPage from './pages/LoginPage';
+import DetalleClientePage from './pages/DetalleClientePage'; 
+
 import ProtectedRoute from './components/ProtectedRoute'; 
 
 function App() {
@@ -43,6 +45,7 @@ function App() {
                       <Route path="/chat" element={<ChatLegalPage />} />
                       <Route path="/casos/:id" element={<DetalleExpedientePage />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
+                      <Route path="/clientes/:id" element={<DetalleClientePage />} />
                     </Routes>
                   </div>
                 </main>
