@@ -14,9 +14,9 @@ export class Caso {
     @Column({ type: "text", nullable: true })
     descripcion?: string;
 
-    // El número de expediente ahora será generado por el servicio
-    @Column({ type: "varchar", length: 50, unique: true, nullable: true })
-    numero_expediente?: string; 
+    // Cambiamos de 50 a 255 para tener margen de sobra
+    @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+    numero_expediente?: string;
 
     @Column({ type: "varchar", length: 100, nullable: true })
     tribunales?: string;
