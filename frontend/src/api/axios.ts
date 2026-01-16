@@ -1,11 +1,13 @@
 import axios from 'axios';
 
-// Detectamos si la aplicación está en producción o desarrollo
+/**
+ * Detectamos el entorno:
+ * Si estamos en producción (desplegados en Render), usamos la URL del backend en Render.
+ * Si estamos en desarrollo (npm run dev), usamos localhost.
+ */
 const isProduction = import.meta.env.PROD;
 
-// Configuramos la instancia central de Axios
 const api = axios.create({
-    // Si estamos en producción usamos Render, si no, usamos localhost
     baseURL: isProduction 
         ? 'https://jurisia-backend.onrender.com/api' 
         : 'http://localhost:3000/api',
@@ -14,14 +16,14 @@ const api = axios.create({
     },
 });
 
-// INTERCEPTOR: Adjunta el Token JWT automáticamente en cada petición
+// INTERCEPTOR DE PETICIÓN: Adjunta el Token JWT automáticamente
 api.interceptors.request.use(
     (config) => {
-        // Buscamos el token almacenado en el navegador
+        // Obtenemos el token almacenado tras el login
         const token = localStorage.getItem('token');
         
         if (token && config.headers) {
-            // Inyectamos el token en el formato estándar Bearer
+            // Lo enviamos en las cabeceras como Bearer Token
             config.headers.Authorization = `Bearer ${token}`;
         }
         
@@ -32,17 +34,17 @@ api.interceptors.request.use(
     }
 );
 
-// INTERCEPTOR: Manejo de errores globales (ej: si el token expira)
+// INTERCEPTOR DE RESPUESTA: Manejo de errores globales (Sesión expirada)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Si el backend responde 401 (No autorizado), limpiamos la sesión
         if (error.response && error.response.status === 401) {
-            // Si el servidor dice que no estamos autorizados, limpiamos el acceso
-            console.warn("Sesión expirada o no autorizada. Redirigiendo...");
+            console.warn("Sesión inválida o expirada. Limpiando credenciales...");
             localStorage.removeItem('token');
             localStorage.removeItem('usuario');
             
-            // Redirección forzada al login si la sesión expira en producción
+            // Si no estamos ya en el login, redirigimos al usuario
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
