@@ -1,8 +1,14 @@
 import axios from 'axios';
 
+// Detectamos si la aplicación está en producción o desarrollo
+const isProduction = import.meta.env.PROD;
+
 // Configuramos la instancia central de Axios
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api', // La URL de tu backend
+    // Si estamos en producción usamos Render, si no, usamos localhost
+    baseURL: isProduction 
+        ? 'https://jurisia-backend.onrender.com/api' 
+        : 'http://localhost:3000/api',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -35,7 +41,11 @@ api.interceptors.response.use(
             console.warn("Sesión expirada o no autorizada. Redirigiendo...");
             localStorage.removeItem('token');
             localStorage.removeItem('usuario');
-            // Aquí podríamos redirigir a /login si fuera necesario
+            
+            // Redirección forzada al login si la sesión expira en producción
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

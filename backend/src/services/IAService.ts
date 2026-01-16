@@ -3,9 +3,12 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-// Configuramos el cliente para que apunte a Groq en lugar de OpenAI
+// CONFIGURACIÓN INTELIGENTE:
+// Usamos GROQ_API_KEY si existe, si no, intentamos OPENAI_API_KEY por si Render la autoconfiguró.
+const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+
 const groq = new OpenAI({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey: apiKey,
     baseURL: "https://api.groq.com/openai/v1", 
 });
 
@@ -15,15 +18,14 @@ export class IAService {
      * Analiza texto legal o responde preguntas usando contexto (RAG).
      */
     async analizarDocumentoLegal(texto: string, systemPrompt?: string) {
-        if (!process.env.GROQ_API_KEY) {
-            console.error("[IA - Error]: La API Key de Groq no está configurada.");
-            return "Error: API Key de Groq faltante.";
+        if (!apiKey) {
+            console.error("[IA - Error]: No se encontró ninguna API Key (GROQ o OPENAI) en las variables de entorno.");
+            return "Error: Credenciales de IA faltantes en el servidor.";
         }
 
         try {
             console.log("[IA - Groq] Iniciando procesamiento con Llama 3.3...");
 
-            // MEJORA: Prompt especializado en Derecho Dominicano
             const defaultPrompt = `Eres un asistente legal experto en la legislación de la República Dominicana. 
                                 Tu tarea es analizar el texto de documentos legales (instancias, sentencias, contratos). 
                                 Debes devolver un análisis en español profesional que incluya:
@@ -66,7 +68,6 @@ export class IAService {
         try {
             console.log("[IA - Groq] Generando respuesta basada en contexto judicial y legislación local...");
 
-            // MEJORA: Definición estricta de rol y citación de leyes locales
             const systemPrompt = `Eres un Consultor Jurídico de IA experto en leyes de la República Dominicana. 
             Tu objetivo es ayudar al abogado analizando los fragmentos de documentos proporcionados (contexto).
             
@@ -86,7 +87,7 @@ export class IAService {
                         content: `CONTEXTO RECUPERADO DEL EXPEDIENTE:\n${contexto}\n\nPREGUNTA DEL ABOGADO: ${pregunta}` 
                     }
                 ],
-                temperature: 0.1, // Mínima temperatura para evitar alucinaciones
+                temperature: 0.1, 
             });
 
             return response.choices[0].message.content;
@@ -154,7 +155,6 @@ export class IAService {
         try {
             console.log(`[IA - Groq] Redactando borrador de: ${tipo}...`);
 
-            // Aseguramos que el nombre nunca sea null para el prompt
             const nombreFinal = clienteNombre || "Parte Interesada";
 
             const redaccionPrompt = `Eres un abogado senior experto en redacción jurídica de la República Dominicana. 
