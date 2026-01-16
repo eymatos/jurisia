@@ -9,17 +9,22 @@ import { Usuario } from "./entities/Usuario";
 
 dotenv.config();
 
-// Verificamos si estamos en producción (Render) o local
-const isCloud = process.env.DATABASE_URL ? true : false;
+// Determinamos si estamos en la nube revisando si DATABASE_URL existe
+const dbUrl = process.env.DATABASE_URL;
 
 export const AppDataSource = new DataSource({
     type: "postgres",
     
-    // Si existe DATABASE_URL (Nube), la usamos. 
-    // Si no, usamos los parámetros de localhost.
-    ...(isCloud ? {
-        url: process.env.DATABASE_URL,
+    // Si hay URL de base de datos (Producción), TypeORM ignora host/port/user/pass
+    ...(dbUrl ? {
+        url: dbUrl,
+        extra: {
+            ssl: {
+                rejectUnauthorized: false
+            }
+        }
     } : {
+        // Configuración para Desarrollo Local
         host: process.env.DB_HOST || "localhost",
         port: parseInt(process.env.DB_PORT || "5432"),
         username: process.env.DB_USER || "postgres",
@@ -27,16 +32,9 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || "jurisia_db",
     }),
 
-    synchronize: true, 
+    synchronize: true, // Esto creará las tablas en Supabase automáticamente
     logging: false,
     entities: [Cliente, Caso, Documento, Alerta, Usuario],
     migrations: [],
     subscribers: [],
-    
-    // Solo activamos SSL si estamos conectando a la nube (Supabase)
-    extra: isCloud ? {
-        ssl: {
-            rejectUnauthorized: false
-        }
-    } : {}
 });
