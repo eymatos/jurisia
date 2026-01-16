@@ -14,7 +14,8 @@ export class Caso {
     @Column({ type: "text", nullable: true })
     descripcion?: string;
 
-    @Column({ type: "varchar", length: 50, nullable: true })
+    // El número de expediente ahora será generado por el servicio
+    @Column({ type: "varchar", length: 50, unique: true, nullable: true })
     numero_expediente?: string; 
 
     @Column({ type: "varchar", length: 100, nullable: true })
@@ -29,15 +30,12 @@ export class Caso {
     @UpdateDateColumn()
     ultima_actualizacion!: Date;
 
-    // Relación corregida: Muchos casos pertenecen a un Cliente
     @ManyToOne(() => Cliente, (cliente) => cliente.casos, { onDelete: 'CASCADE' })
     cliente!: Cliente;
 
-    // Un caso puede tener muchos documentos
     @OneToMany(() => Documento, (documento) => documento.caso)
     documentos?: Documento[];
 
-    // Un caso puede tener muchas alertas
     @OneToMany(() => Alerta, (alerta) => alerta.caso)
     alertas?: Alerta[];
 }

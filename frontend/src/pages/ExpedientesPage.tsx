@@ -14,7 +14,6 @@ interface Caso {
   };
 }
 
-// Interfaz para el listado de clientes en el selector
 interface ClienteSimplificado {
   id: number;
   nombre: string;
@@ -22,14 +21,13 @@ interface ClienteSimplificado {
 
 const ExpedientesPage = () => {
   const [casos, setCasos] = useState<Caso[]>([]);
-  const [clientes, setClientes] = useState<ClienteSimplificado[]>([]); // Estado para los clientes
+  const [clientes, setClientes] = useState<ClienteSimplificado[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   const [nuevoCaso, setNuevoCaso] = useState({
     titulo: '',
-    numero_expediente: '',
     tribunales: '',
     clienteId: '' 
   });
@@ -43,7 +41,6 @@ const ExpedientesPage = () => {
     }
   };
 
-  // Nueva función para cargar la lista de clientes para el modal
   const cargarClientes = async () => {
     try {
       const res = await api.get('/clientes');
@@ -55,7 +52,7 @@ const ExpedientesPage = () => {
 
   useEffect(() => {
     cargarCasos();
-    cargarClientes(); // Cargamos los clientes al iniciar la página
+    cargarClientes();
   }, []);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -73,10 +70,11 @@ const ExpedientesPage = () => {
       
       await api.post('/casos', datosAEnviar);
       setIsModalOpen(false);
-      setNuevoCaso({ titulo: '', numero_expediente: '', tribunales: '', clienteId: '' });
+      // Reseteamos el formulario
+      setNuevoCaso({ titulo: '', tribunales: '', clienteId: '' });
       await cargarCasos(); 
     } catch (err) {
-      alert("Error al crear el expediente. Por favor verifica los datos.");
+      alert("Error al crear el expediente. Asegúrate de seleccionar un cliente.");
       console.error(err);
     } finally {
       setEnviando(false);
@@ -85,12 +83,11 @@ const ExpedientesPage = () => {
 
   const casosFiltrados = casos.filter(caso => 
     caso.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
-    caso.numero_expediente?.toLowerCase().includes(busqueda.toLowerCase())
+    (caso.numero_expediente && caso.numero_expediente.toLowerCase().includes(busqueda.toLowerCase()))
   );
 
   return (
     <div className="p-4 md:p-8 animate-in fade-in duration-500 bg-slate-50 min-h-screen">
-      {/* Header Adaptativo */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 border-b border-slate-200 pb-6 gap-4">
         <div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-950 flex items-center gap-3 tracking-tight">
@@ -108,19 +105,17 @@ const ExpedientesPage = () => {
         </button>
       </div>
 
-      {/* Buscador Full Width */}
       <div className="relative mb-8 md:mb-10">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
         <input 
           type="text"
-          placeholder="Buscar expediente..."
+          placeholder="Buscar por título o número de expediente..."
           className="w-full pl-12 pr-6 py-3 md:py-4 bg-white border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-accent transition-all shadow-sm text-slate-900 font-bold text-sm md:text-lg"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
       </div>
 
-      {/* Modal Responsive */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200">
@@ -135,34 +130,36 @@ const ExpedientesPage = () => {
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Título del Caso</label>
                 <input required name="titulo" value={nuevoCaso.titulo} onChange={handleInputChange} type="text" placeholder="Ej: Divorcio - María López" className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Nº Expediente</label>
-                  <input name="numero_expediente" value={nuevoCaso.numero_expediente} onChange={handleInputChange} type="text" placeholder="ESIV-0045" className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm" />
-                </div>
-                <div>
-                  {/* SELECTOR DE CLIENTES MEJORADO */}
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Seleccionar Cliente</label>
-                  <select 
-                    required 
-                    name="clienteId" 
-                    value={nuevoCaso.clienteId} 
-                    onChange={handleInputChange} 
-                    className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm appearance-none cursor-pointer"
-                  >
-                    <option value="">Seleccione...</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Seleccionar Cliente</label>
+                <select 
+                  required 
+                  name="clienteId" 
+                  value={nuevoCaso.clienteId} 
+                  onChange={handleInputChange} 
+                  className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm appearance-none cursor-pointer"
+                >
+                  <option value="">Seleccione un cliente...</option>
+                  {clientes.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {cliente.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Tribunal / Sede</label>
                 <input name="tribunales" value={nuevoCaso.tribunales} onChange={handleInputChange} type="text" placeholder="Cámara Civil" className="w-full p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl focus:bg-white outline-none transition-all text-slate-900 font-bold text-sm" />
               </div>
+
+              {/* Informativo sobre el número de expediente */}
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                <p className="text-[10px] font-black text-blue-600 uppercase mb-1">Nota del Sistema</p>
+                <p className="text-xs text-blue-800 font-medium">El número de expediente único se generará automáticamente al guardar.</p>
+              </div>
+
               <button 
                 disabled={enviando}
                 type="submit" 
@@ -176,15 +173,11 @@ const ExpedientesPage = () => {
         </div>
       )}
 
-      {/* Grid de Tarjetas Adaptativo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {casosFiltrados.length === 0 ? (
-          <div className="col-span-full py-20 md:py-32 text-center bg-white rounded-[2rem] md:rounded-[3rem] border-4 border-dashed border-slate-200 px-6">
-            <div className="bg-slate-50 w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FolderOpen size={40} className="text-slate-300" />
-            </div>
-            <p className="text-slate-900 font-black text-xl md:text-2xl uppercase tracking-tight">Sin resultados</p>
-            <p className="text-slate-500 text-sm md:text-lg mt-2 font-medium">No encontramos expedientes con ese criterio.</p>
+          <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border-4 border-dashed border-slate-200 px-6">
+            <FolderOpen size={40} className="text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-900 font-black text-xl uppercase tracking-tight">Sin resultados</p>
           </div>
         ) : (
           casosFiltrados.map(caso => (
@@ -193,12 +186,12 @@ const ExpedientesPage = () => {
                 <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
                   {caso.estatus}
                 </span>
-                <span className="text-[10px] md:text-xs text-slate-400 font-mono font-bold bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 truncate max-w-[120px]">
+                <span className="text-[10px] md:text-xs text-slate-400 font-mono font-bold bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 truncate">
                   {caso.numero_expediente}
                 </span>
               </div>
               
-              <h3 className="text-lg md:text-2xl font-black text-slate-950 mb-6 group-hover:text-accent transition-colors leading-tight line-clamp-2 min-h-[3.5rem] md:min-h-[4rem]">
+              <h3 className="text-lg md:text-2xl font-black text-slate-950 mb-6 group-hover:text-accent transition-colors leading-tight line-clamp-2 min-h-[4rem]">
                 {caso.titulo}
               </h3>
 
