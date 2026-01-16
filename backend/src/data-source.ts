@@ -9,25 +9,34 @@ import { Usuario } from "./entities/Usuario";
 
 dotenv.config();
 
+// Verificamos si estamos en producción (Render) o local
+const isCloud = process.env.DATABASE_URL ? true : false;
+
 export const AppDataSource = new DataSource({
     type: "postgres",
-    // Priorizamos la URL de conexión completa (ideal para Supabase/Render)
-    url: process.env.DATABASE_URL,
-    // Si la URL no existe, usamos los parámetros individuales por defecto
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT || "5432"),
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    
+    // Si existe DATABASE_URL (Nube), la usamos. 
+    // Si no, usamos los parámetros de localhost.
+    ...(isCloud ? {
+        url: process.env.DATABASE_URL,
+    } : {
+        host: process.env.DB_HOST || "localhost",
+        port: parseInt(process.env.DB_PORT || "5432"),
+        username: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "admin",
+        database: process.env.DB_NAME || "jurisia_db",
+    }),
+
     synchronize: true, 
     logging: false,
     entities: [Cliente, Caso, Documento, Alerta, Usuario],
     migrations: [],
     subscribers: [],
-    // CONFIGURACIÓN OBLIGATORIA PARA LA NUBE
-    extra: {
+    
+    // Solo activamos SSL si estamos conectando a la nube (Supabase)
+    extra: isCloud ? {
         ssl: {
             rejectUnauthorized: false
         }
-    }
+    } : {}
 });
