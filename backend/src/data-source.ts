@@ -21,8 +21,11 @@ export const AppDataSource = new DataSource({
             rejectUnauthorized: false
         },
         extra: {
-            // Necesario para que el Pooler de Supabase no cierre la conexión
-            prepareThreshold: 0 
+            // Ajustes vitales para Supabase Pooler (puerto 6543)
+            prepareThreshold: 0,
+            max: 10, // Límite de conexiones para no saturar el pooler
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
         }
     } : {
         // Configuración para Desarrollo Local
@@ -33,8 +36,9 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || "jurisia_db",
     }),
 
-    synchronize: true, // Esto creará las tablas en Supabase automáticamente
-    logging: false,
+    // Mantenemos synchronize en true solo si estamos seguros de haber limpiado la DB con el SQL anterior
+    synchronize: true, 
+    logging: process.env.NODE_ENV === 'development', // Solo loguear en local para no ensuciar los logs de Render
     entities: [Cliente, Caso, Documento, Alerta, Usuario],
     migrations: [],
     subscribers: [],
