@@ -1,60 +1,49 @@
 import axios from 'axios';
 
 /**
- * Determinamos el entorno de ejecución de forma segura.
+ * Determinamos el entorno de ejecución. 
+ * Render utiliza import.meta.env.PROD para indicar producción.
  */
 const isProduction = import.meta.env.PROD;
 
 const api = axios.create({
-    // URLs oficiales confirmadas para tu despliegue
+    // Usamos los links exactos de tu proyecto Juris IA
     baseURL: isProduction 
         ? 'https://jurisia-backend.onrender.com/api' 
         : 'http://localhost:3000/api',
     headers: {
         'Content-Type': 'application/json',
     },
-    // Tiempo límite de 30 segundos para manejar el "cold start" de Render
+    // Tiempo de espera para manejar el inicio lento de Render (Cold Start)
     timeout: 30000, 
 });
 
-// INTERCEPTOR DE PETICIÓN: Inyección automática de seguridad
+// INTERCEPTOR DE PETICIÓN: Añade el Token JWT si existe
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
-        
         if (token && config.headers) {
-            // Adjuntamos el token siguiendo el estándar Bearer
             config.headers.Authorization = `Bearer ${token}`;
         }
-        
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
-// INTERCEPTOR DE RESPUESTA: Gestión de sesión y errores de red
+// INTERCEPTOR DE RESPUESTA: Manejo de autenticación fallida
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Caso 1: Error de autenticación (Token expirado o inválido)
+        // Si el servidor responde 401, el usuario o la contraseña están mal en la DB
         if (error.response && error.response.status === 401) {
-            console.error("Sesión expirada. Limpiando datos...");
+            console.error("Acceso denegado o sesión expirada. Redirigiendo al login...");
             localStorage.removeItem('token');
             localStorage.removeItem('usuario');
             
-            // Redirigimos al login solo si no estamos ya allí
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
         }
-
-        // Caso 2: Error de conexión (Backend caído o reiniciando)
-        if (!error.response) {
-            console.error("No hay respuesta del servidor. Verifica tu conexión o el estado del backend.");
-        }
-
         return Promise.reject(error);
     }
 );
