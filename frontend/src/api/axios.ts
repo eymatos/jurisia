@@ -2,13 +2,13 @@ import axios from 'axios';
 
 /**
  * Detectamos el entorno de ejecución para Juris-IA.
- * Prioriza la variable de entorno VITE_API_URL o la URL de producción en Vercel.
+ * Prioriza la variable de entorno VITE_API_URL o la URL canónica de producción en Vercel.
  */
 const isProduction = import.meta.env.PROD;
 
 const api = axios.create({
     baseURL: isProduction 
-        ? (import.meta.env.VITE_API_URL || 'https://jurisia-ekfr-i9q25f1xn-portfolio-yasser.vercel.app/api')
+        ? (import.meta.env.VITE_API_URL || 'https://jurisia-ekfr-ecru.vercel.app/api')
         : 'http://localhost:3000/api',
     headers: {
         'Content-Type': 'application/json',
