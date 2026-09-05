@@ -2,19 +2,18 @@ import axios from 'axios';
 
 /**
  * Detectamos el entorno de ejecución para Juris-IA.
- * import.meta.env.PROD es verdadero cuando la app corre en Render.
+ * Prioriza la variable de entorno VITE_API_URL o la URL de producción en Vercel.
  */
 const isProduction = import.meta.env.PROD;
 
 const api = axios.create({
-    // Utilizamos la URL de producción confirmada
     baseURL: isProduction 
-        ? 'https://jurisia-backend.onrender.com/api' 
+        ? (import.meta.env.VITE_API_URL || 'https://jurisia-ekfr-i9q25f1xn-portfolio-yasser.vercel.app/api')
         : 'http://localhost:3000/api',
     headers: {
         'Content-Type': 'application/json',
     },
-    // Tiempo de espera aumentado para manejar el "despertar" del servidor en Render
+    // Tiempo de espera para peticiones
     timeout: 30000, 
 });
 
