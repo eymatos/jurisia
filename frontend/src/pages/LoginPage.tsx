@@ -17,7 +17,8 @@ const LoginPage = () => {
         setError(null);
 
         try {
-            const response = await api.post('/usuarios/login', { email, password });
+            // Se utiliza la ruta relativa sin barra inicial para preservar el /api del baseURL
+            const response = await api.post('usuarios/login', { email, password });
             
             // Guardamos el token y los datos del usuario en el storage
             localStorage.setItem('token', response.data.token);
