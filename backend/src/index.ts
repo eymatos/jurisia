@@ -20,15 +20,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. Configuración de Middlewares
+// 1. Configuración de Middlewares iniciales
 app.use(express.json());
 
-// 2. Configuración de CORS (Abierto para desarrollo local y producción)
-app.use(cors({
+// 2. Configuración de CORS con soporte integral para preflight OPTIONS
+const corsOptions = {
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+// Responder inmediatamente con 200 a cualquier preflight OPTIONS antes de cualquier otra lógica
+app.options('*', cors(corsOptions));
 
 // 3. Configuración de HELMET (Crítico para el Visor PDF)
 app.use(helmet({
@@ -37,8 +42,12 @@ app.use(helmet({
   frameguard: false, // Permite que la página use iframes de su propio dominio
 }));
 
-// Middleware para asegurar la conexión de TypeORM en Vercel Serverless
+// Middleware para asegurar la conexión de TypeORM en Vercel Serverless (omitir en preflight OPTIONS)
 app.use(async (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   if (!AppDataSource.isInitialized) {
     try {
       await AppDataSource.initialize();
