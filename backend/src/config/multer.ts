@@ -2,15 +2,30 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Asegurar que la carpeta 'uploads' exista
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+// En entornos serverless como Vercel, la única ruta con permisos de escritura es /tmp
+const isVercel = !!process.env.VERCEL;
+const uploadDir = isVercel ? path.join('/tmp', 'uploads') : 'uploads';
+
+// Asegurar que la carpeta exista protegiendo el proceso contra fallos de permisos
+try {
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+} catch (error) {
+    console.warn("Aviso: No se pudo crear el directorio de subida inmediatamente:", error);
 }
 
 // Configuración de almacenamiento
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        // Asegurar que exista antes de escribir el archivo
+        if (!fs.existsSync(uploadDir)) {
+            try {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            } catch (err) {
+                return cb(err as Error, uploadDir);
+            }
+        }
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
