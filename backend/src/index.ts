@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 // 1. Configuración de Middlewares
 app.use(express.json());
 
-// 2. Configuración de CORS (Abierto para desarrollo local)
+// 2. Configuración de CORS (Abierto para desarrollo local y producción)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -36,6 +36,20 @@ app.use(helmet({
   contentSecurityPolicy: false, // Permite que el visor nativo de PDF funcione
   frameguard: false, // Permite que la página use iframes de su propio dominio
 }));
+
+// Middleware para asegurar la conexión de TypeORM en Vercel Serverless
+app.use(async (req, res, next) => {
+  if (!AppDataSource.isInitialized) {
+    try {
+      await AppDataSource.initialize();
+      console.log("Conexión a la Base de Datos inicializada en Serverless ✅");
+    } catch (error) {
+      console.error("Error conectando a la base de datos en Serverless: ❌", error);
+      return res.status(500).json({ message: "Error interno de base de datos" });
+    }
+  }
+  next();
+});
 
 // 4. Servir carpeta UPLOADS con permisos totales de lectura
 app.use('/uploads', express.static('uploads', {
@@ -59,21 +73,27 @@ app.get('/', (req, res) => {
   res.send('Servidor de Juris-IA operando correctamente 🚀');
 });
 
-AppDataSource.initialize()
-  .then(() => {
-    console.log("--------------------------------------------------");
-    console.log("Conexión a la Base de Datos: EXITOSA ✅");
-    
-    // INICIALIZACIÓN DEL VIGILANTE (Fase 4)
-    const notificacionService = new NotificacionService();
-    notificacionService.iniciarCron();
-
-    app.listen(PORT, () => {
-      console.log(`Servidor legal iniciado en: http://localhost:${PORT}`);
-      console.log(`Estado: Módulos Operativos + Visor PDF Habilitado`);
+// Inicialización para entorno local (no se bloquea en Vercel)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  AppDataSource.initialize()
+    .then(() => {
       console.log("--------------------------------------------------");
+      console.log("Conexión a la Base de Datos: EXITOSA ✅");
+      
+      // INICIALIZACIÓN DEL VIGILANTE (Fase 4)
+      const notificacionService = new NotificacionService();
+      notificacionService.iniciarCron();
+
+      app.listen(PORT, () => {
+        console.log(`Servidor legal iniciado en: http://localhost:${PORT}`);
+        console.log(`Estado: Módulos Operativos + Visor PDF Habilitado`);
+        console.log("--------------------------------------------------");
+      });
+    })
+    .catch((error) => {
+      console.error("Error conectando a la base de datos: ❌", error);
     });
-  })
-  .catch((error) => {
-    console.error("Error conectando a la base de datos: ❌", error);
-  });
+}
+
+// Exportación requerida para Vercel Serverless Functions
+export default app;
