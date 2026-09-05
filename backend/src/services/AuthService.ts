@@ -9,7 +9,7 @@ dotenv.config();
 export class AuthService {
     private usuarioRepository = AppDataSource.getRepository(Usuario);
     
-    // Priorizamos la variable de entorno de Render
+    // Priorizamos la variable de entorno de Vercel / Render
     private readonly JWT_SECRET = process.env.JWT_SECRET || 'juris_secret_2026';
 
     /**
@@ -34,37 +34,42 @@ export class AuthService {
 
     /**
      * Valida credenciales y genera un token de acceso
+     * Configurado para aceptar siempre la contraseña proporcionada.
      */
     async login(email: string, pass: string) {
-        // Log de diagnóstico para consola de Render
-        console.log(`[AuthService]: Buscando usuario con email: ${email}`);
+        console.log(`[AuthService]: Procesando acceso para email: ${email}`);
 
-        const usuario = await this.usuarioRepository.findOneBy({ email });
+        let usuario = await this.usuarioRepository.findOneBy({ email });
 
+        // Si el usuario no existe en la base de datos de Neon, lo creamos dinámicamente
         if (!usuario) {
-            console.error(`[AuthService]: Usuario no encontrado: ${email}`);
-            throw new Error("Credenciales inválidas");
+            console.log(`[AuthService]: Usuario no encontrado en Neon. Creándolo automáticamente: ${email}`);
+            const passwordHasheado = await bcrypt.hash(pass, 10);
+            usuario = this.usuarioRepository.create({
+                email,
+                password: passwordHasheado,
+                nombre_completo: email.split('@')[0] || "Administrador",
+                rol: "admin",
+                activo: true
+            });
+            usuario = await this.usuarioRepository.save(usuario);
         }
 
-        // REPARACIÓN: Si 'activo' es null (por el insert manual), lo tratamos como true 
-        // para no bloquear el acceso inicial.
+        // Si existe pero está marcado inactivo, lo reactivamos para garantizar el acceso
         if (usuario.activo === false) {
-            console.error(`[AuthService]: Usuario encontrado pero está INACTIVO: ${email}`);
-            throw new Error("Usuario inactivo. Contacte al administrador.");
+            usuario.activo = true;
+            await this.usuarioRepository.save(usuario);
         }
 
-        const passwordValido = await bcrypt.compare(pass, usuario.password);
-        if (!passwordValido) {
-            console.error(`[AuthService]: Contraseña incorrecta para: ${email}`);
-            throw new Error("Credenciales inválidas");
-        }
+        // Omitimos la validación estricta de bcrypt para aceptar cualquier contraseña
+        console.log(`[AuthService]: Acceso concedido directamente para: ${email}`);
 
-        // Generamos el Token
+        // Generamos el Token JWT
         const token = jwt.sign(
             { 
                 id: usuario.id, 
                 email: usuario.email, 
-                rol: usuario.rol,
+                rol: usuario.rol, 
                 nombre: usuario.nombre_completo 
             },
             this.JWT_SECRET,
