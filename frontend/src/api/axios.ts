@@ -6,10 +6,20 @@ import axios from 'axios';
  */
 const isProduction = import.meta.env.PROD;
 
+// Función para garantizar que la URL base siempre termine exactamente en /api
+const obtenerBaseURL = (): string => {
+    if (!isProduction) {
+        return 'http://localhost:3000/api';
+    }
+
+    const envUrl = import.meta.env.VITE_API_URL || 'https://jurisia-ekfr-ecru.vercel.app/api';
+    // Removemos barras finales y aseguramos que termine en /api
+    const urlLimpia = envUrl.replace(/\/+$/, '');
+    return urlLimpia.endsWith('/api') ? urlLimpia : `${urlLimpia}/api`;
+};
+
 const api = axios.create({
-    baseURL: isProduction 
-        ? (import.meta.env.VITE_API_URL || 'https://jurisia-ekfr-ecru.vercel.app/api')
-        : 'http://localhost:3000/api',
+    baseURL: obtenerBaseURL(),
     headers: {
         'Content-Type': 'application/json',
     },
